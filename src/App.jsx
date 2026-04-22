@@ -3,9 +3,9 @@ import { useState } from 'react'
 const PRIORITIES = ['low', 'normal', 'high']
 
 const priorityConfig = {
-  low:    { label: 'Low',    color: 'bg-slate-200 text-slate-500',   dot: 'bg-slate-400' },
-  normal: { label: 'Normal', color: 'bg-blue-100 text-blue-600',     dot: 'bg-blue-400'  },
-  high:   { label: 'High',   color: 'bg-red-100 text-red-600',       dot: 'bg-red-500'   },
+  low: { label: 'Low', color: 'bg-slate-200 text-slate-500', dot: 'bg-slate-400' },
+  normal: { label: 'Normal', color: 'bg-blue-100 text-blue-600', dot: 'bg-blue-400' },
+  high: { label: 'High', color: 'bg-red-100 text-red-600', dot: 'bg-red-500' },
 }
 
 function PriorityBadge({ priority }) {
@@ -33,22 +33,52 @@ function PrioritySelect({ value, onChange, className = '' }) {
   )
 }
 
+function DueDateBadge({ dueDate }) {
+  if (!dueDate) return null
+
+  const formatted = new Date(`${dueDate}T00:00:00`).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+
+  return (
+    <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+      Due {formatted}
+    </span>
+  )
+}
+
+function DueDateInput({ value, onChange, className = '' }) {
+  return (
+    <input
+      type="date"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      aria-label="Due date"
+      className={`border border-slate-300 rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 ${className}`}
+    />
+  )
+}
+
 export default function App() {
   const [todos, setTodos] = useState([
-    { id: 1, text: 'Read a book',      done: false, priority: 'normal' },
-    { id: 2, text: 'Go for a walk',    done: true,  priority: 'low'    },
-    { id: 3, text: 'Write some code',  done: false, priority: 'high'   },
+    { id: 1, text: 'Read a book', done: false, priority: 'normal', dueDate: '' },
+    { id: 2, text: 'Go for a walk', done: true, priority: 'low', dueDate: '2026-04-20' },
+    { id: 3, text: 'Write some code', done: false, priority: 'high', dueDate: '2026-04-25' },
   ])
   const [input, setInput] = useState('')
   const [newPriority, setNewPriority] = useState('normal')
+  const [newDueDate, setNewDueDate] = useState('')
   const [filter, setFilter] = useState('all')
 
   const addTodo = () => {
     const text = input.trim()
     if (!text) return
-    setTodos([...todos, { id: Date.now(), text, done: false, priority: newPriority }])
+    setTodos([...todos, { id: Date.now(), text, done: false, priority: newPriority, dueDate: newDueDate }])
     setInput('')
     setNewPriority('normal')
+    setNewDueDate('')
   }
 
   const toggleTodo = (id) =>
@@ -58,6 +88,9 @@ export default function App() {
 
   const setPriority = (id, priority) =>
     setTodos(todos.map((t) => (t.id === id ? { ...t, priority } : t)))
+
+  const setDueDate = (id, dueDate) =>
+    setTodos(todos.map((t) => (t.id === id ? { ...t, dueDate } : t)))
 
   const visible = todos.filter((t) =>
     filter === 'active' ? !t.done : filter === 'completed' ? t.done : true,
@@ -77,7 +110,6 @@ export default function App() {
       <div className="w-full max-w-md bg-white rounded-xl shadow-md p-6">
         <h1 className="text-2xl font-bold text-slate-800 mb-4">Todo List</h1>
 
-        {/* Add todo row */}
         <div className="flex gap-2 mb-2">
           <input
             type="text"
@@ -95,13 +127,13 @@ export default function App() {
           </button>
         </div>
 
-        {/* Priority selector for new todo */}
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex flex-wrap items-center gap-2 mb-4">
           <span className="text-xs text-slate-500">Priority:</span>
           <PrioritySelect value={newPriority} onChange={setNewPriority} />
+          <span className="text-xs text-slate-500 ml-1">Due date:</span>
+          <DueDateInput value={newDueDate} onChange={setNewDueDate} />
         </div>
 
-        {/* Filter tabs */}
         <div className="flex gap-2 mb-4">
           <button onClick={() => setFilter('all')} className={tabClass('all')}>
             All
@@ -114,18 +146,16 @@ export default function App() {
           </button>
         </div>
 
-        {/* Todo list */}
         <ul className="space-y-2">
           {visible.map((todo) => (
             <li
               key={todo.id}
-              className="flex items-center gap-3 px-3 py-2 rounded-md border border-slate-200 hover:bg-slate-50"
+              className="flex items-start gap-3 px-3 py-2 rounded-md border border-slate-200 hover:bg-slate-50"
             >
-              {/* Toggle */}
               <button
                 onClick={() => toggleTodo(todo.id)}
                 aria-label={todo.done ? 'Mark incomplete' : 'Mark complete'}
-                className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition ${
+                className={`w-5 h-5 mt-0.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition ${
                   todo.done
                     ? 'bg-indigo-600 border-indigo-600'
                     : 'border-slate-300 hover:border-indigo-400'
@@ -138,26 +168,33 @@ export default function App() {
                 )}
               </button>
 
-              {/* Text */}
-              <span
-                className={`flex-1 text-left text-sm ${
-                  todo.done ? 'line-through text-slate-400' : 'text-slate-800'
-                }`}
-              >
-                {todo.text}
-              </span>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className={`text-left text-sm ${
+                      todo.done ? 'line-through text-slate-400' : 'text-slate-800'
+                    }`}
+                  >
+                    {todo.text}
+                  </span>
+                  <DueDateBadge dueDate={todo.dueDate} />
+                </div>
 
-              {/* Priority badge + inline changer */}
-              <div className="flex items-center gap-1.5 flex-shrink-0">
-                <PriorityBadge priority={todo.priority} />
-                <PrioritySelect
-                  value={todo.priority}
-                  onChange={(p) => setPriority(todo.id, p)}
-                  className="opacity-0 hover:opacity-100 focus:opacity-100 w-20 transition-opacity"
-                />
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <PriorityBadge priority={todo.priority} />
+                  <PrioritySelect
+                    value={todo.priority}
+                    onChange={(p) => setPriority(todo.id, p)}
+                    className="w-20"
+                  />
+                  <DueDateInput
+                    value={todo.dueDate}
+                    onChange={(date) => setDueDate(todo.id, date)}
+                    className="w-36"
+                  />
+                </div>
               </div>
 
-              {/* Delete */}
               <button
                 onClick={() => deleteTodo(todo.id)}
                 className="text-slate-400 hover:text-red-500 text-lg font-bold px-1 flex-shrink-0"
